@@ -1,7 +1,4 @@
-#!/usr/bin/perl -w
-#version 0.1b released 5/1/2011
-#dan sullivan dansullivan@gmail.com
-#Inspired by Chris McInery's pwshell
+#!/usr/bin/env perl -w
 
 use warnings;
 use strict;
@@ -299,8 +296,8 @@ sub main {
 sub init {
     my $environment = $_[0] or die "Init called without environment\n";
     #print these should probably be tuned
-    $environment->{'gpgPath'} = '/usr/bin/gpg';
-    #this should print out the PID of every PID on the system
+    $environment->{'gpgPath'} = '/usr/local/bin/gpg';
+    #this should print out the PID of every process on the system
     $environment->{'pscmd'} = '/bin/ps -ef | awk \'{print $2}\'';
     $environment->{'applicationData'} = '/var/tmp/pw7/'; 
     $environment->{'applicationRootData'} = '/var/tmp/pw7/'; 
