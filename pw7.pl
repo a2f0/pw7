@@ -177,7 +177,7 @@ sub main {
             } else {
                 $environment = pw7::lockApplication($environment);
                 pw7::generateKeys($environment, $environment->{'loginName'} . "-Pw7");
-                        $environment = pw7::unlockApplication($environment);
+                $environment = pw7::unlockApplication($environment);
                 next;
             }
             };
@@ -1436,52 +1436,53 @@ sub generateKeys {
         $session->log_stdout(0);    
         $session->debug(0);
     }
-        my $command = $environment->{'gpgPath'} . " --homedir " . $keyring . " --gen-key";
-        pw7::printDebug($environment, "Executing command: " . $command . "\n");
-        print "\nGenerating keys.  This could take a couple of minutes...\n";
-    $session->spawn($environment->{'gpgPath'} . " --homedir " . $keyring . " --gen-key") or die "Unable to execute command: $command";
-    my $match = $session->expect(300, 
-                ["selection?" =>  sub {          
-                        $session->send("\n"), 
-                        Expect::exp_continue; }],
-                ["What keysize do you want" => sub {                    
-                        $session->send($environment->{'keySize'} . "\n");            
-                        Expect::exp_continue; }],
-                ["Key is valid for?" => sub {
-                        $session->send($environment->{'keyValidityTimeInDays'} . "\n");
-                        Expect::exp_continue; }],
-                ["Key expires at" => sub {
-                        $session->send ("y\n");  
-            Expect::exp_continue; }],
-        ["Key does not expire at all" => sub { 
-                        $session->send ("y\n");  
-                        Expect::exp_continue; }],              
-                ["Real name:" => sub { 
-            #I had to add the -pw7 extension to automate this because gpg requires the loginName to be 5 or more characters, i.e. dan doesn't work 
-                        $session->send ($realName . "\n");
-            Expect::exp_continue; }],  
-                ["Email address:" => sub {                            
-                        $session->send ($emailAddress . "\n"); 
-                        Expect::exp_continue; }],
-                ["Comment:" => sub {                     
-                        $session->send ("pw7-keypair\n");
-                        Expect::exp_continue; }],
-                ["uit?" => sub { 
-                        $session->send ("O\n"); 
-                        Expect::exp_continue; }],        
-                ["Enter passphrase:" => sub { 
-                        $session->send ($password . "\n");  
-                        Expect::exp_continue; }],                                           
-                ["Repeat passphrase:" => sub {               
-                        $session->send ($password . "\n"); 
-                        Expect::exp_continue; }],
-                ["trustdb created"],    
-        ["public and secret key created and signed." => sub {
-        }]
-    );                                                                                                                                                                                     
-        pw7::printDebug($environment, "Expect match: $match\n");
-    $session->soft_close();
-    undef $session;
+    my $command = $environment->{'gpgPath'} . " --homedir " . $keyring . " --gen-key";
+    pw7::printDebug($environment, "Executing command: " . $command . "\n");
+    print "\nGenerating keys.  This could take a couple of minutes...\n";
+    die "quit generating keys";
+    #$session->spawn($environment->{'gpgPath'} . " --homedir " . $keyring . " --gen-key") or die "Unable to execute command: $command";
+    #my $match = $session->expect(300, 
+    #            ["selection?" =>  sub {          
+    #                    $session->send("\n"), 
+    #                    Expect::exp_continue; }],
+    #            ["What keysize do you want" => sub {                    
+    #                    $session->send($environment->{'keySize'} . "\n");            
+    #                    Expect::exp_continue; }],
+    #            ["Key is valid for?" => sub {
+    #                    $session->send($environment->{'keyValidityTimeInDays'} . "\n");
+    #                    Expect::exp_continue; }],
+    #            ["Key expires at" => sub {
+    #                    $session->send ("y\n");  
+    #        Expect::exp_continue; }],
+    #    ["Key does not expire at all" => sub { 
+    #                    $session->send ("y\n");  
+    #                    Expect::exp_continue; }],              
+    #            ["Real name:" => sub { 
+    #        #I had to add the -pw7 extension to automate this because gpg requires the loginName to be 5 or more characters, i.e. dan doesn't work 
+    #                    $session->send ($realName . "\n");
+    #        Expect::exp_continue; }],  
+    #            ["Email address:" => sub {                            
+    #                    $session->send ($emailAddress . "\n"); 
+    #                    Expect::exp_continue; }],
+    #            ["Comment:" => sub {                     
+    #                    $session->send ("pw7-keypair\n");
+    #                    Expect::exp_continue; }],
+    #            ["uit?" => sub { 
+    #                    $session->send ("O\n"); 
+    #                    Expect::exp_continue; }],        
+    #            ["Enter passphrase:" => sub { 
+    #                    $session->send ($password . "\n");  
+    #                    Expect::exp_continue; }],           
+    #            ["Repeat passphrase:" => sub {               
+    #                    $session->send ($password . "\n"); 
+    #                    Expect::exp_continue; }],
+    #            ["trustdb created"],    
+    #    ["public and secret key created and signed." => sub {
+    #    }]
+    #);                      
+    #pw7::printDebug($environment, "Expect match: $match\n");
+    #$session->soft_close();
+    #undef $session;
 }
 
 #this will list all of the keys in your home keyring
