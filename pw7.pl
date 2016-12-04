@@ -1,4 +1,5 @@
 #!/usr/bin/env perl -w
+#http://www.perlmonks.org/?node_id=522597
 
 use warnings;
 use strict;
@@ -300,7 +301,8 @@ sub init {
     #this should print out the PID of every process on the system
     $environment->{'pscmd'} = '/bin/ps -ef | awk \'{print $2}\'';
     $environment->{'applicationData'} = '/var/tmp/pw7/'; 
-    $environment->{'applicationRootData'} = '/var/tmp/pw7/'; 
+    #took a slash out on the line below
+    $environment->{'applicationRootData'} = '/var/tmp/pw7'; 
 
     #these generally don't need to be tuned
     $environment->{'homepath'} = $ENV{HOME};
@@ -966,7 +968,7 @@ sub getItem {
             pw7::printDebug($environment, "Didn't unlock dummy file.\n");
         }
     } elsif ($environment->{'pgp'}->errstr =~ /No such file or directory/) {
-        die "PGP error string No such file or directory incurred.  This should never happen.\n";    
+        die "PGP error string: No such file or directory incurred.  This should never happen.\n";    
     } elsif ($environment->{'pgp'}->errstr =~ /Need passphrase to unlock secret key/) {
         
     } elsif ($environment->{'pgp'}->errstr =~ /Can't find a secret key to decrypt message/) {
@@ -1030,6 +1032,7 @@ sub setMyPassphrase {
 sub logMeIn {
     my $environment = $_[0] or die "Login called  without environment\n";
     my $dummyFile = $environment->{'homeKeyPath'} . "/" . "dummyFile";  
+    pw7::printDebug($environment, "logMeIn called");
     if($environment->{'userFullyAuthenticated'} eq '1') {
         print "You are already logged in.\n";
         return $environment;
@@ -1396,11 +1399,12 @@ sub printPIDValidIndicator {
 
 #this will generate keys in a particular keyring.
 sub generateKeys {
-        my $environment = $_[0] or die "Generate personal keys called without environment\n";    
-        my $realName = $_[1] or die "Generate personal keys called without realName for key\n";
+    my $environment = $_[0] or die "Generate personal keys called without environment\n";    
+    my $realName = $_[1] or die "Generate personal keys called without realName for key\n";
     my $password;
     my $keyring;
     my $emailAddress;
+    my $identity;
     $environment = pw7::doFileAndPermissionChecks($environment); 
         
     if($realName eq $environment->{'rootKeyName'}) {
@@ -1415,31 +1419,49 @@ sub generateKeys {
             print "Found existing key mapping for " . $environment->{'loginName'} . " in " . $environment->{'masterPublicKeyring'} . ".\n";
             return; 
         }    
-            $environment->{'ringIdentifier'} = "private"; 
+        $environment->{'ringIdentifier'} = "private"; 
         $environment = pw7::doIhaveAHexKeyMapping($environment);
         delete $environment->{'ringIdentifier'};
         if($environment->{'hexKeyMapping'}) {
             print "Found existing key mapping for " . $environment->{'loginName'} . " in " . $environment->{'masterPublicKeyring'} . ".\n";
-            return; 
+            return;
         }    
-        pw7::setMyPassphrase($environment);
+        #pw7::setMyPassphrase($environment);
         $password = $environment->{'passphrase'};
         $keyring = $environment->{'homeKeyPath'}; 
         $emailAddress = $environment->{'loginName'} . "@" . $environment->{'hostname'}; 
     } 
-        my $session = new Expect(); 
-    if ($environment->{'verbose'} eq 'true') {
-        pw7::printDebug($environment, "Setting expect.pm settings for verbose.\n");
-        $session->debug(1);
-        $session->log_stdout(1);    
-    } else {
-        $session->log_stdout(0);    
-        $session->debug(0);
-    }
-    my $command = $environment->{'gpgPath'} . " --homedir " . $keyring . " --gen-key";
-    pw7::printDebug($environment, "Executing command: " . $command . "\n");
+    #my $session = new Expect(); 
+    #if ($environment->{'verbose'} eq 'true') {
+    #    pw7::printDebug($environment, "Setting expect.pm settings for verbose.\n");
+    #    $session->debug(1);
+    #    $session->log_stdout(1);    
+    #} else {
+    #    $session->log_stdout(0);    
+    #    $session->debug(0);
+    #}
+    #my $command = $environment->{'gpgPath'} . " --homedir " . $keyring . " --gen-key";
+    #pw7::printDebug($environment, "Executing command: " . $command . "\n");
     print "\nGenerating keys.  This could take a couple of minutes...\n";
-    die "quit generating keys";
+    #$environment = pw7::createPGPHandler($environment); 
+    $identity = "$realName <$emailAddress>";
+    print "IDENTITY $identity\n";
+    my $keychain = Crypt::OpenPGP->new;
+    my($pub, $sec) = $keychain->keygen(Type => "RSA", Size => "2048", Identity => $identity, Passphrase => 'aaaaaaaa', Verbosity => '1');
+    my $public_str = $pub->save;
+    my $secret_str = $sec->save;
+    #print "GENERATED PUBLIC KEY $pub STR $public_str\n"; 
+    #print "GENERATED PUBLIC KEY $sec STR $secret_str\n"; 
+
+    open( PUB, '>', $environment->{'homePublicKeyring'}) or die $!;
+      print PUB $public_str;
+    close(PUB);
+
+    open( PRIV, '>', $environment->{'homePrivateKeyring'} ) or die $!;
+      print PRIV $secret_str;
+    close(PRIV);
+
+    #die "quit generating keys";
     #$session->spawn($environment->{'gpgPath'} . " --homedir " . $keyring . " --gen-key") or die "Unable to execute command: $command";
     #my $match = $session->expect(300, 
     #            ["selection?" =>  sub {          
@@ -1487,15 +1509,15 @@ sub generateKeys {
 
 #this will list all of the keys in your home keyring
 sub listHomePrivateKeys {
-        my $environment = $_[0] or die "List private keys called without environment\n";
-        $environment = pw7::doFileAndPermissionChecks($environment);
+    my $environment = $_[0] or die "List private keys called without environment\n";
+    $environment = pw7::doFileAndPermissionChecks($environment);
     system ( $environment->{'gpgPath'} . " --list-keys --no-default-keyring --fingerprint --keyring " . $environment->{'homePublicKeyring'});     
 }
 
 #this will take your public key in your private keyring and add it to the master keyring
 sub addPersonalPublicToMaster {
-        my $environment = $_[0] or die "Add personal public to master called without environment\n";
-        &doFileAndPermissionChecks($environment);
+    my $environment = $_[0] or die "Add personal public to master called without environment\n";
+    &doFileAndPermissionChecks($environment);
     pw7::printDebug($environment, "Add personal public to master called.\n");   
     $environment->{'ringIdentifier'} = "master";
     $environment = pw7::doIhaveAHexKeyMapping($environment);
@@ -1513,9 +1535,8 @@ sub addPersonalPublicToMaster {
         return;
     } else {
 
-
     }
-        my $session = new Expect(); 
+    my $session = new Expect(); 
     if ($environment->{'verbose'} eq 'true') {
         pw7::printDebug($environment, "Setting expect.pm settings for verbose.\n");
         $session->debug(1);
@@ -2020,7 +2041,7 @@ sub createPGPHandler {
     delete $environment->{'pgp'};
     printDebug($environment, "master public key ring: " . $environment->{'masterPublicKeyring'} . "\n");
     printDebug($environment, "home private key ring: " . $environment->{'homePrivateKeyring'} . "\n");
-    
+
     $environment->{'pgp'} = new Crypt::OpenPGP(
         Compat => 'GnuPG',  
         PubRing => $environment->{'masterPublicKeyring'} ,
@@ -2060,7 +2081,7 @@ sub initializeUserNametoHexKeyMapHashes {
     
     foreach my $line (split(/\n/, `$command`)) {
         pw7::printDebug($environment,  "$line\n");
-        if ($line =~ /^pub:.:\d+:\d+:\S{8}(\S{8}):\d{4}-\d{2}-\d{2}:.*:.*:.*:.+<(\S+)\@$hostname?>:.*:.*:$/) {  
+        if ($line =~ /^uid:.:\d+:\d+:\S{8}(\S{8}):\d{4}-\d{2}-\d{2}:.*:.*:.*:.+<(\S+)\@$hostname?>:.*:.*:$/) {  
             pw7::printDebug($environment, "loading into hash mappings: $2 : $1 \n");
             $usertohexid{$2} = $1;
             $hexidtouser{$1} = $2;
@@ -2123,6 +2144,7 @@ sub doFileAndPermissionChecks {
 #and then create a dummy file that is used for authentication.
 sub initUser {
     my $environment = $_[0] or die "Init user called without environment\n";
+    pw7::printDebug($environment, "initUser called\n");
     $environment = pw7::checkLocked($environment);
     $environment->{'errorLevel'} = 0;
     if (!$environment->{'isLocked'}) {
@@ -2136,7 +2158,7 @@ sub initUser {
         } else {
             pw7::printDebug($environment, "Not generating a private key, already exists.\n");
         }
-
+        pw7::printDebug($environment, "Finished calling generateKeys from initUser\n");
         $environment->{'ringIdentifier'} = 'private';
         $environment = pw7::doIhaveAHexKeyMapping($environment);
         if ($environment->{'hexKeyMapping'}) {  
@@ -2287,10 +2309,10 @@ sub checkIfFileExistsAndDeleteItIfItDoes {
 
 #this will delete everything and start over.  It's really only used for debug purposes.
 sub deleteEverythingAndStartOver {
-        my $environment = $_[0] or die "Delete everything and start over called without environment\n"; 
+    my $environment = $_[0] or die "Delete everything and start over called without environment\n"; 
     pw7::printDebug($environment, "Delete everything and start over called.\n");
-    print "This feature is disabled.\n";
-    return $environment;
+    #print "This feature is disabled.\n";
+    #return $environment;
     $environment = pw7::checkLocked($environment);
     if ($environment->{'isLocked'}) {
         print "Application is curretly locked by " . $environment->{'lockedBy'} . " with PID " . $environment->{'lockPID'} . ". You can force unluck with (f).\n";
