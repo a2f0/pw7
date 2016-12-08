@@ -2069,6 +2069,11 @@ sub initializeUserNametoHexKeyMapHashes {
     delete $environment->{"usertohexid-$ringidentifier"};
     delete $environment->{"hexidtouser-$ringidentifier"};
     
+    #--with-colons
+    #Print key listings delimited by colons. Note that the output will be 
+    #encoded in UTF-8 regardless of any --display-charset setting. This 
+    #format is useful when GnuPG is called from scripts and other programs 
+    #as it is easily machine parsed. 
     if ($ringidentifier eq "master") {
         $command = $environment->{'gpgPath'} . " --homedir " . $environment->{'masterPublicKeyringPath'} . " --list-keys --with-colons 2>&1";
     } elsif ($ringidentifier eq "private") {
@@ -2081,11 +2086,14 @@ sub initializeUserNametoHexKeyMapHashes {
     
     foreach my $line (split(/\n/, `$command`)) {
         pw7::printDebug($environment,  "$line\n");
+        #if ($line =~ /^uid:.:\d+:\d+:\S{8}(\S{8}):\d{4}-\d{2}-\d{2}:.*:.*:.*:.+<(\S+)\@$hostname?>:.*:.*:$/) {  
         if ($line =~ /^uid:.:\d+:\d+:\S{8}(\S{8}):\d{4}-\d{2}-\d{2}:.*:.*:.*:.+<(\S+)\@$hostname?>:.*:.*:$/) {  
             pw7::printDebug($environment, "loading into hash mappings: $2 : $1 \n");
             $usertohexid{$2} = $1;
             $hexidtouser{$1} = $2;
             $count+=1;
+        } else {
+            pw7::printDebug($environment, "line failed validation: $line\n");
         }
     }       
     pw7::printDebug($environment,"Found $count keys in ring identifier $ringidentifier\n");
