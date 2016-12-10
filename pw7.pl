@@ -2087,14 +2087,28 @@ sub initializeUserNametoHexKeyMapHashes {
     foreach my $line (split(/\n/, `$command`)) {
         pw7::printDebug($environment,  "$line\n");
         #if ($line =~ /^uid:.:\d+:\d+:\S{8}(\S{8}):\d{4}-\d{2}-\d{2}:.*:.*:.*:.+<(\S+)\@$hostname?>:.*:.*:$/) {  
-        if ($line =~ /^uid:.:\d+:\d+:\S{8}(\S{8}):\d{4}-\d{2}-\d{2}:.*:.*:.*:.+<(\S+)\@$hostname?>:.*:.*:$/) {  
-            pw7::printDebug($environment, "loading into hash mappings: $2 : $1 \n");
-            $usertohexid{$2} = $1;
-            $hexidtouser{$1} = $2;
-            $count+=1;
+        #    pw7::printDebug($environment, "loading into hash mappings: $2 : $1 \n");
+        #    $usertohexid{$2} = $1;
+        #    $hexidtouser{$1} = $2;
+        #    $count+=1;
+        #} else {
+        #    pw7::printDebug($environment, "line failed validation: $line\n");
+        #}
+        my @pieces = split(/:/, $line);
+        if ($pieces[0] eq "uid") {
+          printDebug($environment, "hex id $pieces[7]\n");
+          printDebug($environment, "identifier $pieces[9]\n");
+          my @identity_pieces = split(/ /, $pieces[9]);
+          my @name_pieces = split(/-/, $identity_pieces[0]);
+          my $user = $name_pieces[0];
+          pw7::printDebug($environment, "found user $user and id $pieces[7]\n");
+          $usertohexid{$user} = $pieces[7];
+          $hexidtouser{$pieces[7]} = $user;
+          $count+=1;
         } else {
-            pw7::printDebug($environment, "line failed validation: $line\n");
+          pw7::printDebug($environment, "skipping non uid line: $line\n");
         }
+
     }       
     pw7::printDebug($environment,"Found $count keys in ring identifier $ringidentifier\n");
     if ($count > 0) { 
