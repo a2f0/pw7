@@ -45,7 +45,7 @@ sub main {
     my $prompt = $environment->{'prompt'};
     while ( defined ($_ = $term->readline($environment->{'prompt'}))) 
     { 
-            ($_ eq '?' || $_ eq 'help') && do { 
+         ($_ eq '?' || $_ eq 'help') && do { 
                     pw7::printRegularMenu($environment);
                     next; 
             }; 
@@ -203,7 +203,7 @@ sub main {
             } 
                     next;
             };
-        ($_ eq 't') && do {
+        ($_ eq 'v') && do {
                     pw7::toggleVerbose($environment);
                     next;
             };
@@ -321,7 +321,8 @@ sub init {
     $environment->{'prompt'} = $environment->{'loginName'} . '@pw7> ';
     $environment->{'passphrase'} = '';
     $environment->{'keyValidityTimeInDays'} = '0'; #maybe implement expiring keys, key rotation later
-    $environment->{'hostname'} = Sys::Hostname::hostname();
+    #$environment->{'hostname'} = Sys::Hostname::hostname();
+    $environment->{'hostname'} = 'pw7';
     $environment->{'termreadlineconf'} = $environment->{'term'}->Attribs();
     $environment->{'passphraseValidated'} = '0';
     $environment->{'verbose'} = 'false';    
@@ -1032,7 +1033,7 @@ sub setMyPassphrase {
 sub logMeIn {
     my $environment = $_[0] or die "Login called  without environment\n";
     my $dummyFile = $environment->{'homeKeyPath'} . "/" . "dummyFile";  
-    pw7::printDebug($environment, "logMeIn called");
+    pw7::printDebug($environment, "logMeIn called\n");
     if($environment->{'userFullyAuthenticated'} eq '1') {
         print "You are already logged in.\n";
         return $environment;
@@ -1364,7 +1365,7 @@ sub checkAndCleanStaleLock {
         foreach my $line (split(/\n/, `$command`)) {
             if ($pidfound eq 'false') {
                 if ($line eq $environment->{'lockPID'}) {
-                    $pidfound = 'true'  
+                    $pidfound = 'true'
                 } else {
                         
                 }  
@@ -1445,18 +1446,22 @@ sub generateKeys {
     print "\nGenerating keys.  This could take a couple of minutes...\n";
     #$environment = pw7::createPGPHandler($environment); 
     $identity = "$realName <$emailAddress>";
-    print "IDENTITY $identity\n";
+    pw7::printDebug($environment, "identity is $identity\n");
+    pw7::printDebug($environment, "initializing keychain\n");
     my $keychain = Crypt::OpenPGP->new;
-    my($pub, $sec) = $keychain->keygen(Type => "RSA", Size => "2048", Identity => $identity, Passphrase => 'aaaaaaaa', Verbosity => '1');
+    pw7::printDebug($environment, "finished initializing keychain\n");
+    my($pub, $sec) = $keychain->keygen(Type => "RSA", Size => "2048", Identity => $identity, Passphrase => 'a', Verbosity => '1');
     my $public_str = $pub->save;
     my $secret_str = $sec->save;
     #print "GENERATED PUBLIC KEY $pub STR $public_str\n"; 
     #print "GENERATED PUBLIC KEY $sec STR $secret_str\n"; 
 
+    pw7::printDebug($environment, "writing public key to $environment->{'homePublicKeyring'}\n");
     open( PUB, '>', $environment->{'homePublicKeyring'}) or die $!;
       print PUB $public_str;
     close(PUB);
 
+    pw7::printDebug($environment, "writing private key to $environment->{'homePrivateKeyring'}\n");
     open( PRIV, '>', $environment->{'homePrivateKeyring'} ) or die $!;
       print PRIV $secret_str;
     close(PRIV);
@@ -1505,6 +1510,7 @@ sub generateKeys {
     #pw7::printDebug($environment, "Expect match: $match\n");
     #$session->soft_close();
     #undef $session;
+    print "\nwhatever\n";
 }
 
 #this will list all of the keys in your home keyring
@@ -1549,7 +1555,7 @@ sub addPersonalPublicToMaster {
     pw7::printDebug($environment, "spawning command: $command\n");
     $session->spawn($command) or die "Unable to execute command: $command";
     $session->soft_close();
-    
+   
     my $session2 = new Expect();
     if ($environment->{'verbose'} eq 'true') {
         pw7::printDebug($environment, "Setting expect.pm settings for verbose.\n");
@@ -1559,7 +1565,7 @@ sub addPersonalPublicToMaster {
         $session2->log_stdout(0);   
         $session2->debug(0);
     }
-    my $command2 = $environment->{'gpgPath'} . " --no-default-keyring --keyring " . $environment->{'masterPublicKeyring'} . " --import " . $environment->{'homeKeyPath'} . "/" . $environment->{'loginName'} . ".key";
+    my $command2 = $environment->{'gpgPath'} . " --no-default-keyring --allow-non-selfsigned-uid --keyring " . $environment->{'masterPublicKeyring'} . " --import " . $environment->{'homeKeyPath'} . "/" . $environment->{'loginName'} . ".key --allow-non-selfsigned-uid";
     pw7::printDebug($environment, "spawning second command: $command2\n");
     $session2->spawn($command2) or die "Unable to execute command: $command2";
     $session2->soft_close();
@@ -2025,13 +2031,13 @@ sub setItemAuthorizations {
 #sub-menu for authorizations help
 sub printSetAuthHelp {
     print "Authorization mode commands:\n";
-    print "\tshow                           Display current authorizations\n";
-    print "\t+<user>                        Authorize a user\n";
-    print "\t-<user>                        Deauthorize a user\n";
-    print "\tusers,list                     List available users\n";
-    print "\tt                              Toggle verbose mode\n";
+    print "\tshow           Display current authorizations\n";
+    print "\t+<user>        Authorize a user\n";
+    print "\t-<user>        Deauthorize a user\n";
+    print "\tusers,list     List available users\n";
+    print "\tv              Toggle verbose mode\n";
     print "\tp              Print environment\n";
-    print "\tend                            Exit authorization mode and encrypt file\n";
+    print "\tend            Exit authorization mode and encrypt file\n";
 }
 
 #this will initialize a PGP handler.
