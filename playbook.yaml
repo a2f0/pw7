@@ -1,0 +1,6 @@
+- hosts: all
+  tasks:
+    - include: tasks/update-package-database.yaml
+      become: yes
+    - include: tasks/install-dependencies.yaml
+      become: yes

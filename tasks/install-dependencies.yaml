@@ -1,0 +1,9 @@
+- name: perlbrew
+  apt:
+    name: perlbrew
+    state: present
+
+- name: ansible
+  apt:
+    name: ansible
+    state: present
