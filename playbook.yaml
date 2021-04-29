@@ -4,3 +4,5 @@
       become: yes
     - include: tasks/install-dependencies.yaml
       become: yes
+    - include: tasks/configure-locale.yaml
+      become: yes
