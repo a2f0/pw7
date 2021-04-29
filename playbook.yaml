@@ -2,7 +2,11 @@
   tasks:
     - include: tasks/update-package-database.yaml
       become: yes
+    - include: tasks/update-os.yaml
+      become: yes
     - include: tasks/install-dependencies.yaml
       become: yes
     - include: tasks/configure-locale.yaml
+      become: yes
+    - include: tasks/reboot.yaml
       become: yes
